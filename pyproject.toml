@@ -1,0 +1,47 @@
+[project]
+name = "agentcore-memory-browser"
+version = "0.1.0"
+description = "A web interface for browsing and exploring Amazon Bedrock AgentCore Memory resources"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "boto3>=1.40.33",
+    "fastapi>=0.116.2",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.35.0",
+]
+authors = [
+    {name = "Danilo Poccia", email = "danilo@amazon.com"}
+]
+license = "MIT"
+keywords = ["aws", "bedrock", "agentcore", "memory", "fastapi", "browser"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
+
+[project.scripts]
+agentcore-memory-browser = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/danilop/agentcore-memory-browser"
+Repository = "https://github.com/danilop/agentcore-memory-browser"
+Issues = "https://github.com/danilop/agentcore-memory-browser/issues"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main", "backend"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.13.0",
+    "vulture>=2.14",
+]

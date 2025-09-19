@@ -1,0 +1,53 @@
+# Vulture configuration for AgentCore Memory Browser
+# This file contains patterns to ignore known false positives
+
+# Pydantic model fields - these are used by the framework for validation and serialization
+# but appear unused to static analysis
+MemorySummary.id
+MemorySummary.arn
+MemorySummary.status
+MemorySummary.name
+MemorySummary.description
+MemorySummary.createdAt
+MemorySummary.updatedAt
+
+Strategy.strategyId
+Strategy.name
+Strategy.type
+Strategy.status
+Strategy.namespaces
+Strategy.description
+Strategy.createdAt
+Strategy.updatedAt
+
+Memory.id
+Memory.arn
+Memory.name
+Memory.status
+Memory.strategies
+Memory.description
+Memory.createdAt
+Memory.updatedAt
+Memory.encryptionKeyArn
+Memory.memoryExecutionRoleArn
+
+EventSummary.eventId
+EventSummary.sessionId
+EventSummary.actorId
+EventSummary.createdAt
+EventSummary.eventType
+EventSummary.data
+EventSummary.metadata
+
+MemoryRecordSummary.recordId
+MemoryRecordSummary.memoryStrategyId
+MemoryRecordSummary.namespace
+MemoryRecordSummary.createdAt
+MemoryRecordSummary.updatedAt
+MemoryRecordSummary.content
+MemoryRecordSummary.metadata
+
+RetrieveRequest.query
+RetrieveRequest.namespace
+RetrieveRequest.maxResults
+RetrieveRequest.nextToken
