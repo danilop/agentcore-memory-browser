@@ -2,6 +2,8 @@
 
 A web interface for browsing and exploring Amazon Bedrock AgentCore Memory resources. This application provides a user-friendly way to interact with AgentCore Memory data through both control plane and data plane APIs.
 
+[![Watch the video](https://img.youtube.com/vi/0tDpugivB4U/maxresdefault.jpg)](https://www.youtube.com/watch?v=0tDpugivB4U)
+
 ![AgentCore Memory Browser Interface](https://img.shields.io/badge/Python-3.13+-blue.svg) ![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-orange.svg) ![FastAPI](https://img.shields.io/badge/Framework-FastAPI-green.svg)
 
 ## Features
