@@ -4,6 +4,10 @@ A web interface for browsing and exploring Amazon Bedrock AgentCore Memory resou
 
 [![Watch the video](https://img.youtube.com/vi/0tDpugivB4U/maxresdefault.jpg)](https://www.youtube.com/watch?v=0tDpugivB4U)
 
+For more information on these implementaitons, see this blog post series:
+
+[Visualizing AI Agent Memory: Building a Web Browser for Amazon Bedrock AgentCore Memory](https://dev.to/aws/visualizing-ai-agent-memory-building-a-web-browser-for-amazon-bedrock-agentcore-memory-3571)
+
 ![AgentCore Memory Browser Interface](https://img.shields.io/badge/Python-3.13+-blue.svg) ![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-orange.svg) ![FastAPI](https://img.shields.io/badge/Framework-FastAPI-green.svg)
 
 ## Features
