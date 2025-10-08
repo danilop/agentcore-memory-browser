@@ -236,3 +236,4 @@ aws-credentials.json
 # Project specific logs
 *.log
 .vulture
+.vscode

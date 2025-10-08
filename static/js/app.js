@@ -998,9 +998,9 @@ function displayEvents(container, events) {
                         <tr>
                             <td><code>${event.eventId}</code></td>
                             <td>${event.eventType || 'N/A'}</td>
-                            <td>${formatDate(event.createdAt)}</td>
+                            <td>${formatDate(event.eventTimestamp || event.createdAt)}</td>
                             <td>
-                                ${generateContentPreview(event.data, event.metadata)}
+                                ${generateContentPreview(event.payload || event.data, event.metadata)}
                             </td>
                             <td>
                                 <button class="btn btn-outline-secondary btn-sm view-json-btn"

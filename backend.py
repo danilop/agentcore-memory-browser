@@ -105,10 +105,13 @@ class EventSummary(BaseModel):
     eventId: str
     sessionId: str
     actorId: str
-    createdAt: Union[int, str, datetime]
+    eventTimestamp: Optional[Union[int, str, datetime]] = None
+    createdAt: Optional[Union[int, str, datetime]] = None  # Fallback for compatibility
     eventType: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+    payload: Optional[list] = None  # AWS uses 'payload' not 'data'
+    data: Optional[Dict[str, Any]] = None  # Fallback for compatibility
     metadata: Optional[Dict[str, Any]] = None
+    branch: Optional[Dict[str, Any]] = None
 
 
 class MemoryRecordSummary(BaseModel):
