@@ -45,7 +45,7 @@ function setupEventListeners() {
         memorySelect.addEventListener('change', handleMemorySelection);
     }
 
-    // Setup global copy button handler
+    // Setup global click handlers
     document.addEventListener('click', function(event) {
         if (event.target.closest('.copy-btn')) {
             handleCopyClick(event);
@@ -54,6 +54,11 @@ function setupEventListeners() {
         // Handle JSON view buttons
         if (event.target.closest('.view-json-btn')) {
             handleJsonViewClick(event);
+        }
+
+        // Handle delete buttons
+        if (event.target.closest('.delete-btn')) {
+            handleDeleteClick(event);
         }
     });
 }
@@ -355,11 +360,6 @@ function generateStrategyContent(strategy, index) {
         <div class="row mt-3">
             <div class="col-12">
                 <div class="btn-group" role="group">
-                    <button class="btn btn-outline-primary btn-sm"
-                            onclick="listEvents(${index})">
-                        <i class="bi bi-calendar-event me-2"></i>
-                        List Events
-                    </button>
                     <button class="btn btn-outline-success btn-sm"
                             onclick="listMemoryRecords(${index})">
                         <i class="bi bi-list-ul me-2"></i>
@@ -371,29 +371,6 @@ function generateStrategyContent(strategy, index) {
                         Retrieve Memory Records
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Events Form -->
-        <div id="strategy-${index}-events" class="mt-4 d-none">
-            <h6>List Events</h6>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Session ID</label>
-                    <input type="text" id="strategy-${index}-session-id" class="form-control" placeholder="Enter session ID...">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Actor ID</label>
-                    <input type="text" id="strategy-${index}-actor-id" class="form-control" placeholder="Enter actor ID...">
-                </div>
-            </div>
-            <div class="mb-3">
-                <button class="btn btn-primary" onclick="executeListEvents(${index})">
-                    <i class="bi bi-calendar-event me-2"></i>List Events
-                </button>
-            </div>
-            <div id="strategy-${index}-events-results">
-                <!-- Events results will be loaded here -->
             </div>
         </div>
 
@@ -542,6 +519,209 @@ function handleJsonViewClick(event) {
     }
 }
 
+// Universal delete handler using data attributes
+function handleDeleteClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const button = event.target.closest('.delete-btn');
+    if (!button) return;
+
+    const itemType = button.dataset.itemType;
+    const itemId = button.dataset.itemId;
+
+    if (itemType === 'event') {
+        confirmDeleteEvent(itemId);
+    } else if (itemType === 'record') {
+        confirmDeleteRecord(itemId);
+    } else {
+        console.error('Unknown item type:', itemType);
+    }
+}
+
+// Confirm and delete an event
+function confirmDeleteEvent(eventId) {
+    const event = currentEventsData[eventId];
+    if (!event) {
+        console.error('Event not found:', eventId);
+        return;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('delete-confirm-modal'));
+    const messageEl = document.getElementById('delete-confirm-message');
+    const confirmBtn = document.getElementById('delete-confirm-btn');
+
+    messageEl.textContent = `Are you sure you want to delete event "${eventId}"?`;
+
+    // Remove any existing click handlers and add new one
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    newConfirmBtn.addEventListener('click', async function() {
+        modal.hide();
+        await executeDeleteEvent(eventId, event.sessionId, event.actorId);
+    });
+
+    modal.show();
+}
+
+// Execute event deletion
+async function executeDeleteEvent(eventId, sessionId, actorId) {
+    if (!currentMemory) {
+        console.error('No memory selected');
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `/api/memories/${encodeURIComponent(currentMemory.id)}/events/${encodeURIComponent(eventId)}?session_id=${encodeURIComponent(sessionId)}&actor_id=${encodeURIComponent(actorId)}`,
+            { method: 'DELETE' }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Event deleted:', result);
+
+        // Remove from in-memory data
+        delete currentEventsData[eventId];
+
+        // Remove the row from DOM
+        const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+        if (row) {
+            // Get references BEFORE removing the row
+            const badge = row.closest('.table-responsive')?.previousElementSibling?.querySelector('.badge');
+
+            // Now remove the row
+            row.remove();
+
+            // Update the count badge
+            if (badge) {
+                const currentCount = Object.keys(currentEventsData).length;
+                badge.textContent = `${currentCount} event(s)`;
+            }
+        }
+
+        // Show success message
+        showCopySuccess('Event deleted successfully');
+
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        alert(`Error deleting event: ${error.message}`);
+    }
+}
+
+// Confirm and delete a memory record
+function confirmDeleteRecord(recordId) {
+    const record = currentRecordsData[recordId];
+    if (!record) {
+        console.error('Record not found:', recordId);
+        return;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('delete-confirm-modal'));
+    const messageEl = document.getElementById('delete-confirm-message');
+    const confirmBtn = document.getElementById('delete-confirm-btn');
+
+    messageEl.textContent = `Are you sure you want to delete memory record "${recordId}"?`;
+
+    // Remove any existing click handlers and add new one
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    newConfirmBtn.addEventListener('click', async function() {
+        modal.hide();
+        await executeDeleteRecord(recordId, record.namespace);
+    });
+
+    modal.show();
+}
+
+// Execute memory record deletion
+async function executeDeleteRecord(recordId, namespace) {
+    if (!currentMemory) {
+        console.error('No memory selected');
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `/api/memories/${encodeURIComponent(currentMemory.id)}/records/${encodeURIComponent(recordId)}?namespace=${encodeURIComponent(namespace)}`,
+            { method: 'DELETE' }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Memory record deleted:', result);
+
+        // Remove from in-memory data
+        delete currentRecordsData[recordId];
+
+        // Remove the row from DOM
+        const row = document.querySelector(`tr[data-record-id="${recordId}"]`);
+        if (row) {
+            // Get references BEFORE removing the row
+            const tableContainer = row.closest('.table-responsive');
+            const header = tableContainer?.previousElementSibling;
+            const countText = header?.querySelector('small');
+
+            // Now remove the row
+            row.remove();
+
+            // Update the count in the header
+            if (countText) {
+                const currentCount = Object.keys(currentRecordsData).length;
+                // Extract the namespace from existing text
+                const namespaceMatch = countText.textContent.match(/Namespace: <code>([^<]+)<\/code>/);
+                const namespace = namespaceMatch ? namespaceMatch[1] : '';
+                countText.innerHTML = `Namespace: <code>${namespace}</code> • Found ${currentCount} record(s)`;
+            }
+        }
+
+        // Show success message
+        showCopySuccess('Memory record deleted successfully');
+
+    } catch (error) {
+        console.error('Error deleting memory record:', error);
+        alert(`Error deleting memory record: ${error.message}`);
+    }
+}
+
+// Refresh the current records list after deletion
+function refreshCurrentRecordsList(namespace) {
+    // Find which strategy tab is active and refresh its records
+    if (!currentMemory) return;
+
+    // Look for active strategy tabs
+    const activeTabs = document.querySelectorAll('.tab-pane.active');
+    activeTabs.forEach(tab => {
+        const tabId = tab.id;
+        const match = tabId.match(/strategy-(\d+)/);
+        if (match) {
+            const strategyIndex = parseInt(match[1]);
+
+            // Check if memory records results div has content
+            const resultsDiv = document.getElementById(`strategy-${strategyIndex}-memory-records-results`);
+            if (resultsDiv && resultsDiv.innerHTML.trim() !== '') {
+                // Refresh this strategy's records
+                executeListMemoryRecords(strategyIndex);
+            }
+
+            // Check if retrieve results div has content
+            const retrieveDiv = document.getElementById(`strategy-${strategyIndex}-retrieve-results`);
+            if (retrieveDiv && retrieveDiv.innerHTML.trim() !== '') {
+                // Refresh this strategy's retrieve results
+                executeRetrieveMemoryRecords(strategyIndex);
+            }
+        }
+    });
+}
+
 // Main copy function
 function copyToClipboard(text, label = 'content', button = null) {
     try {
@@ -637,40 +817,20 @@ async function refreshData() {
 
 // API functions for memory operations
 
-// List Events
-function listEvents(strategyIndex) {
-    if (!currentMemory || !currentMemory.strategies[strategyIndex]) {
-        console.error('Strategy not found');
+// Global storage for current session/actor IDs
+let currentSessionId = null;
+let currentActorId = null;
+
+// Execute Global List Events (from main section, not strategy-specific)
+async function executeGlobalListEvents() {
+    if (!currentMemory) {
+        console.error('No memory selected');
         return;
     }
 
-    const strategy = currentMemory.strategies[strategyIndex];
-
-    // Hide other sections
-    hideElement(document.getElementById(`strategy-${strategyIndex}-memory-records`));
-    hideElement(document.getElementById(`strategy-${strategyIndex}-retrieve`));
-
-    // Show events section
-    const eventsDiv = document.getElementById(`strategy-${strategyIndex}-events`);
-    showElement(eventsDiv);
-
-    // Focus on session ID input
-    setTimeout(() => {
-        const sessionIdInput = document.getElementById(`strategy-${strategyIndex}-session-id`);
-        if (sessionIdInput) sessionIdInput.focus();
-    }, 100);
-}
-
-// Execute List Events
-async function executeListEvents(strategyIndex) {
-    if (!currentMemory || !currentMemory.strategies[strategyIndex]) {
-        console.error('Strategy not found');
-        return;
-    }
-
-    const sessionIdInput = document.getElementById(`strategy-${strategyIndex}-session-id`);
-    const actorIdInput = document.getElementById(`strategy-${strategyIndex}-actor-id`);
-    const resultsDiv = document.getElementById(`strategy-${strategyIndex}-events-results`);
+    const sessionIdInput = document.getElementById('global-session-id');
+    const actorIdInput = document.getElementById('global-actor-id');
+    const resultsDiv = document.getElementById('global-events-results');
 
     await executeApiCall({
         resultsDiv,
@@ -687,6 +847,11 @@ async function executeListEvents(strategyIndex) {
         apiCall: async () => {
             const sessionId = sessionIdInput.value.trim();
             const actorId = actorIdInput.value.trim();
+
+            // Store for deletion later
+            currentSessionId = sessionId;
+            currentActorId = actorId;
+
             const response = await fetch(`/api/memories/${currentMemory.id}/events?session_id=${encodeURIComponent(sessionId)}&actor_id=${encodeURIComponent(actorId)}&max_results=50`);
 
             if (!response.ok) {
@@ -695,7 +860,7 @@ async function executeListEvents(strategyIndex) {
 
             return await response.json();
         },
-        displayFunction: (container, result) => displayEvents(container, result.events),
+        displayFunction: (container, result) => displayEvents(container, result.events, currentSessionId, currentActorId),
         loadingMessage: "Loading events...",
         errorPrefix: "Error loading events"
     });
@@ -960,7 +1125,7 @@ function showWarning(container, message) {
 }
 
 // Display events in a table
-function displayEvents(container, events) {
+function displayEvents(container, events, sessionId, actorId) {
     if (!events || events.length === 0) {
         container.innerHTML = `
             <div class="alert alert-info">
@@ -971,10 +1136,14 @@ function displayEvents(container, events) {
         return;
     }
 
-    // Store events for modal display
+    // Store events for modal display and deletion
     currentEventsData = {};
     events.forEach(event => {
-        currentEventsData[event.eventId] = event;
+        currentEventsData[event.eventId] = {
+            ...event,
+            sessionId: sessionId,
+            actorId: actorId
+        };
     });
 
     const tableHtml = `
@@ -995,7 +1164,7 @@ function displayEvents(container, events) {
                 </thead>
                 <tbody>
                     ${events.map(event => `
-                        <tr>
+                        <tr data-event-id="${event.eventId}">
                             <td><code>${event.eventId}</code></td>
                             <td>${event.eventType || 'N/A'}</td>
                             <td>${formatDate(event.eventTimestamp || event.createdAt)}</td>
@@ -1003,10 +1172,17 @@ function displayEvents(container, events) {
                                 ${generateContentPreview(event.payload || event.data, event.metadata)}
                             </td>
                             <td>
-                                <button class="btn btn-outline-secondary btn-sm view-json-btn"
+                                <button class="btn btn-outline-primary btn-sm view-json-btn me-1"
                                         data-item-type="event"
-                                        data-item-id="${event.eventId}">
+                                        data-item-id="${event.eventId}"
+                                        title="View details">
                                     <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm delete-btn"
+                                        data-item-type="event"
+                                        data-item-id="${event.eventId}"
+                                        title="Delete event">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -1178,12 +1354,15 @@ function displayRecords(container, records, namespace, title = 'Memory Records')
         return;
     }
 
-    // Clear and store records data for modal viewing
+    // Clear and store records data for modal viewing and deletion
     currentRecordsData = {};
     records.forEach(record => {
         const recordId = record.recordId || record.memoryRecordId;
         if (recordId) {
-            currentRecordsData[recordId] = record;
+            currentRecordsData[recordId] = {
+                ...record,
+                namespace: namespace
+            };
         }
     });
 
@@ -1217,7 +1396,7 @@ function displayRecords(container, records, namespace, title = 'Memory Records')
         const contentPreview = generateContentPreview(record.content, record.metadata);
 
         html += `
-            <tr>
+            <tr data-record-id="${recordId}">
                 <td><code class="small">${recordId}</code></td>
                 <td><small>${strategyId}</small></td>
                 <td><small>${created}</small></td>
@@ -1225,10 +1404,17 @@ function displayRecords(container, records, namespace, title = 'Memory Records')
                     ${contentPreview}
                 </td>
                 <td>
-                    <button class="btn btn-outline-primary btn-sm view-json-btn"
+                    <button class="btn btn-outline-primary btn-sm view-json-btn me-1"
                             data-item-type="record"
-                            data-item-id="${recordId}">
+                            data-item-id="${recordId}"
+                            title="View details">
                         <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm delete-btn"
+                            data-item-type="record"
+                            data-item-id="${recordId}"
+                            title="Delete record">
+                        <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>

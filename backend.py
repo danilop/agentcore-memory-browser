@@ -333,6 +333,51 @@ async def retrieve_memory_records(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/api/memories/{memory_id}/events/{event_id}")
+async def delete_event(
+    memory_id: str,
+    event_id: str,
+    session_id: str,
+    actor_id: str
+) -> Dict[str, Any]:
+    """Delete an event"""
+    try:
+        bedrock_data.delete_event(
+            memoryId=memory_id,
+            eventId=event_id,
+            sessionId=session_id,
+            actorId=actor_id
+        )
+        return {"success": True, "message": "Event deleted successfully"}
+
+    except bedrock_data.exceptions.ResourceNotFoundException:
+        raise HTTPException(status_code=404, detail="Event not found")
+    except Exception as e:
+        logger.error(f"Error deleting event {event_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/memories/{memory_id}/records/{record_id}")
+async def delete_memory_record(
+    memory_id: str,
+    record_id: str,
+    namespace: str
+) -> Dict[str, Any]:
+    """Delete a memory record"""
+    try:
+        bedrock_data.delete_memory_record(
+            memoryId=memory_id,
+            memoryRecordId=record_id
+        )
+        return {"success": True, "message": "Memory record deleted successfully"}
+
+    except bedrock_data.exceptions.ResourceNotFoundException:
+        raise HTTPException(status_code=404, detail="Memory record not found")
+    except Exception as e:
+        logger.error(f"Error deleting memory record {record_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
