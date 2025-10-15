@@ -34,7 +34,7 @@ logger.info(f"Generated cache-busting UUID: {CACHE_BUST_UUID}")
 app = FastAPI(
     title="AgentCore Memory Browser",
     description="Browse Amazon Bedrock AgentCore Memory resources",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Configure CORS for development
@@ -57,14 +57,16 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
 # AWS Bedrock clients
-bedrock_control = boto3.client('bedrock-agentcore-control')
-bedrock_data = boto3.client('bedrock-agentcore')
+bedrock_control = boto3.client("bedrock-agentcore-control")
+bedrock_data = boto3.client("bedrock-agentcore")
 
 
 # --- Pydantic Models ---
 
+
 class MemorySummary(BaseModel):
     """Summary information for a memory"""
+
     id: str
     arn: str
     status: str
@@ -76,6 +78,7 @@ class MemorySummary(BaseModel):
 
 class Strategy(BaseModel):
     """Memory strategy configuration"""
+
     strategyId: str
     name: str
     type: str
@@ -88,6 +91,7 @@ class Strategy(BaseModel):
 
 class Memory(BaseModel):
     """Complete memory details"""
+
     id: str
     arn: str
     name: str
@@ -102,6 +106,7 @@ class Memory(BaseModel):
 
 class EventSummary(BaseModel):
     """Event information"""
+
     eventId: str
     sessionId: str
     actorId: str
@@ -116,7 +121,8 @@ class EventSummary(BaseModel):
 
 class MemoryRecordSummary(BaseModel):
     """Memory record information"""
-    recordId: str = Field(alias='memoryRecordId')
+
+    recordId: str = Field(alias="memoryRecordId")
     memoryStrategyId: str
     namespace: Optional[str] = None
     createdAt: Union[int, str, datetime]
@@ -127,6 +133,7 @@ class MemoryRecordSummary(BaseModel):
 
 class RetrieveRequest(BaseModel):
     """Request for retrieving memory records"""
+
     query: str
     namespace: str
     maxResults: Optional[int] = 10
@@ -135,7 +142,10 @@ class RetrieveRequest(BaseModel):
 
 # --- Helper Functions ---
 
-def _process_api_response(response_data: Dict[str, Any], item_key: str, model_class: type) -> List[BaseModel]:
+
+def _process_api_response(
+    response_data: Dict[str, Any], item_key: str, model_class: type
+) -> List[BaseModel]:
     """
     DRY helper for processing API responses with validation
 
@@ -158,7 +168,9 @@ def _process_api_response(response_data: Dict[str, Any], item_key: str, model_cl
     return items
 
 
-def _build_paginated_response(items: List[BaseModel], response_data: Dict[str, Any], items_key: str) -> Dict[str, Any]:
+def _build_paginated_response(
+    items: List[BaseModel], response_data: Dict[str, Any], items_key: str
+) -> Dict[str, Any]:
     """
     DRY helper for building paginated API responses
 
@@ -170,13 +182,11 @@ def _build_paginated_response(items: List[BaseModel], response_data: Dict[str, A
     Returns:
         Standardized paginated response
     """
-    return {
-        items_key: items,
-        'nextToken': response_data.get('nextToken')
-    }
+    return {items_key: items, "nextToken": response_data.get("nextToken")}
 
 
 # --- API Endpoints ---
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, v: Optional[str] = None):
@@ -186,14 +196,13 @@ async def home(request: Request, v: Optional[str] = None):
         return RedirectResponse(
             url=f"/?v={CACHE_BUST_UUID}",
             status_code=302,
-            headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
         )
 
     # Serve the page with cache-busting UUID
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "cache_bust_uuid": CACHE_BUST_UUID
-    })
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "cache_bust_uuid": CACHE_BUST_UUID}
+    )
 
 
 @app.get("/api/memories")
@@ -203,7 +212,7 @@ async def list_memories() -> List[MemorySummary]:
         response = bedrock_control.list_memories()
         memories = []
 
-        for memory_data in response.get('memories', []):
+        for memory_data in response.get("memories", []):
             # Parse each memory safely, using Pydantic's validation
             try:
                 memory = MemorySummary.model_validate(memory_data)
@@ -224,11 +233,11 @@ async def get_memory(memory_id: str) -> Memory:
     """Get detailed information about a specific memory"""
     try:
         response = bedrock_control.get_memory(memoryId=memory_id)
-        memory_data = response['memory']
+        memory_data = response["memory"]
 
         # Parse strategies with validation
         strategies = []
-        for strategy_data in memory_data.get('strategies', []):
+        for strategy_data in memory_data.get("strategies", []):
             try:
                 strategy = Strategy.model_validate(strategy_data)
                 strategies.append(strategy)
@@ -237,7 +246,7 @@ async def get_memory(memory_id: str) -> Memory:
                 continue
 
         # Build the complete memory object
-        memory_data['strategies'] = strategies
+        memory_data["strategies"] = strategies
         return Memory.model_validate(memory_data)
 
     except bedrock_control.exceptions.ResourceNotFoundException:
@@ -253,23 +262,23 @@ async def list_events(
     session_id: str,
     actor_id: str,
     max_results: int = 50,
-    next_token: Optional[str] = None
+    next_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """List events for a memory session"""
     try:
         params = {
-            'memoryId': memory_id,
-            'sessionId': session_id,
-            'actorId': actor_id,
-            'maxResults': max_results
+            "memoryId": memory_id,
+            "sessionId": session_id,
+            "actorId": actor_id,
+            "maxResults": max_results,
         }
 
         if next_token:
-            params['nextToken'] = next_token
+            params["nextToken"] = next_token
 
         response = bedrock_data.list_events(**params)
-        events = _process_api_response(response, 'events', EventSummary)
-        return _build_paginated_response(events, response, 'events')
+        events = _process_api_response(response, "events", EventSummary)
+        return _build_paginated_response(events, response, "events")
 
     except Exception as e:
         logger.error(f"Error listing events: {e}")
@@ -282,25 +291,27 @@ async def list_memory_records(
     namespace: str,
     memory_strategy_id: Optional[str] = None,
     max_results: int = 50,
-    next_token: Optional[str] = None
+    next_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """List memory records in a namespace"""
     try:
         params = {
-            'memoryId': memory_id,
-            'namespace': namespace,
-            'maxResults': max_results
+            "memoryId": memory_id,
+            "namespace": namespace,
+            "maxResults": max_results,
         }
 
         if memory_strategy_id:
-            params['memoryStrategyId'] = memory_strategy_id
+            params["memoryStrategyId"] = memory_strategy_id
 
         if next_token:
-            params['nextToken'] = next_token
+            params["nextToken"] = next_token
 
         response = bedrock_data.list_memory_records(**params)
-        records = _process_api_response(response, 'memoryRecordSummaries', MemoryRecordSummary)
-        return _build_paginated_response(records, response, 'records')
+        records = _process_api_response(
+            response, "memoryRecordSummaries", MemoryRecordSummary
+        )
+        return _build_paginated_response(records, response, "records")
 
     except Exception as e:
         logger.error(f"Error listing records: {e}")
@@ -309,24 +320,25 @@ async def list_memory_records(
 
 @app.post("/api/memories/{memory_id}/retrieve")
 async def retrieve_memory_records(
-    memory_id: str,
-    request: RetrieveRequest
+    memory_id: str, request: RetrieveRequest
 ) -> Dict[str, Any]:
     """Search and retrieve memory records"""
     try:
         params = {
-            'memoryId': memory_id,
-            'namespace': request.namespace,
-            'searchCriteria': {'searchQuery': request.query},
-            'maxResults': request.maxResults
+            "memoryId": memory_id,
+            "namespace": request.namespace,
+            "searchCriteria": {"searchQuery": request.query},
+            "maxResults": request.maxResults,
         }
 
         if request.nextToken:
-            params['nextToken'] = request.nextToken
+            params["nextToken"] = request.nextToken
 
         response = bedrock_data.retrieve_memory_records(**params)
-        records = _process_api_response(response, 'memoryRecordSummaries', MemoryRecordSummary)
-        return _build_paginated_response(records, response, 'records')
+        records = _process_api_response(
+            response, "memoryRecordSummaries", MemoryRecordSummary
+        )
+        return _build_paginated_response(records, response, "records")
 
     except Exception as e:
         logger.error(f"Error retrieving records: {e}")
@@ -335,18 +347,12 @@ async def retrieve_memory_records(
 
 @app.delete("/api/memories/{memory_id}/events/{event_id}")
 async def delete_event(
-    memory_id: str,
-    event_id: str,
-    session_id: str,
-    actor_id: str
+    memory_id: str, event_id: str, session_id: str, actor_id: str
 ) -> Dict[str, Any]:
     """Delete an event"""
     try:
         bedrock_data.delete_event(
-            memoryId=memory_id,
-            eventId=event_id,
-            sessionId=session_id,
-            actorId=actor_id
+            memoryId=memory_id, eventId=event_id, sessionId=session_id, actorId=actor_id
         )
         return {"success": True, "message": "Event deleted successfully"}
 
@@ -359,16 +365,11 @@ async def delete_event(
 
 @app.delete("/api/memories/{memory_id}/records/{record_id}")
 async def delete_memory_record(
-    memory_id: str,
-    record_id: str,
-    namespace: str
+    memory_id: str, record_id: str, namespace: str
 ) -> Dict[str, Any]:
     """Delete a memory record"""
     try:
-        bedrock_data.delete_memory_record(
-            memoryId=memory_id,
-            memoryRecordId=record_id
-        )
+        bedrock_data.delete_memory_record(memoryId=memory_id, memoryRecordId=record_id)
         return {"success": True, "message": "Memory record deleted successfully"}
 
     except bedrock_data.exceptions.ResourceNotFoundException:
@@ -380,4 +381,5 @@ async def delete_memory_record(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)

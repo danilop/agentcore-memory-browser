@@ -1,0 +1,51 @@
+# Vulture whitelist for AgentCore Memory Browser
+# These are Pydantic model fields and FastAPI routes that are used
+# but appear unused to vulture's static analysis
+
+# Common Pydantic fields across models
+id
+arn
+status
+name
+description
+
+# MemorySummary fields
+createdAt
+updatedAt
+
+# Strategy fields
+strategyId
+namespaces
+createdAt
+updatedAt
+
+# Memory fields
+strategies
+createdAt
+updatedAt
+encryptionKeyArn
+memoryExecutionRoleArn
+
+# EventSummary fields
+eventId
+sessionId
+actorId
+eventTimestamp
+createdAt
+eventType
+payload
+data
+metadata
+branch
+
+# MemoryRecordSummary fields
+recordId
+memoryStrategyId
+namespace
+createdAt
+updatedAt
+content
+metadata
+
+# FastAPI routes (used by the framework)
+home

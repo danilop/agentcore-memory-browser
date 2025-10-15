@@ -45,3 +45,7 @@ dev = [
     "ruff>=0.13.0",
     "vulture>=2.14",
 ]
+
+[tool.vulture]
+paths = [".", ".vulture_whitelist"]
+exclude = [".venv/", "build/"]
