@@ -77,7 +77,7 @@ Examples:
             sys.executable,
             "-m",
             "uvicorn",
-            "backend:app",
+            "agentcore_memory_browser.backend:app",
             "--host",
             args.host,
             "--port",

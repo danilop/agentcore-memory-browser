@@ -47,8 +47,12 @@ app.add_middleware(
 )
 
 # Setup directories for static files and templates
-static_dir = Path("static")
-templates_dir = Path("templates")
+# Use paths relative to this module's location for proper packaging
+module_dir = Path(__file__).parent
+static_dir = module_dir / "static"
+templates_dir = module_dir / "templates"
+
+# Create directories if they don't exist (only needed for development)
 static_dir.mkdir(exist_ok=True)
 templates_dir.mkdir(exist_ok=True)
 
